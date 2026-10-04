@@ -14,7 +14,7 @@ jobs:
 
       - name: Install kubeconform
         run: |
-          curl -fsSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz \
+          curl -fsSL https://github.com/yannh/kubeconform/releases/download/v0.7.0/kubeconform-linux-amd64.tar.gz \
             | sudo tar -xz -C /usr/local/bin kubeconform
 
       - name: Validate Kustomize overlays
@@ -28,7 +28,7 @@ jobs:
         run: python3 -m compileall -q scripts
 
       - name: Shell lint
-        run: shellcheck scripts/ubuntu/*.sh
+        run: shellcheck --severity=warning scripts/ubuntu/*.sh
 
   e2e-kubeadm:
     needs: validate

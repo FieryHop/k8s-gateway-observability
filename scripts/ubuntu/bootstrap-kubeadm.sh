@@ -12,6 +12,7 @@ KUBE_USER="${SUDO_USER:-root}"
 log() { printf '\n==> %s\n' "$*"; }
 
 require_environment() {
+  # shellcheck source=/dev/null
   . /etc/os-release
   [[ "${ID}" == "ubuntu" && "${VERSION_ID}" == "24.04" ]] \
     || { echo "Ubuntu 24.04 is required" >&2; exit 1; }
