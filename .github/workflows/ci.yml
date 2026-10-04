@@ -1,0 +1,63 @@
+name: ci
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubeconform
+        run: |
+          curl -fsSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz \
+            | sudo tar -xz -C /usr/local/bin kubeconform
+
+      - name: Validate Kustomize overlays
+        run: |
+          for dir in kubernetes/base gateway logging monitoring; do
+            echo "== ${dir}"
+            kubectl kustomize "${dir}" | kubeconform -strict -ignore-missing-schemas -summary
+          done
+
+      - name: Python syntax
+        run: python3 -m compileall -q scripts
+
+      - name: Shell lint
+        run: shellcheck scripts/ubuntu/*.sh
+
+  e2e-kubeadm:
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bootstrap kubeadm cluster
+        run: sudo -E ./scripts/ubuntu/bootstrap-kubeadm.sh
+
+      - name: Deploy
+        run: python3 scripts/deploy.py
+
+      - name: Verify
+        run: |
+          python3 scripts/verify.py
+          python3 scripts/verify_gateway.py
+
+      - name: Diagnostics
+        if: failure()
+        run: |
+          kubectl get pods -A -o wide
+          kubectl get gateway,httproute -A
+          kubectl get pvc -A
+          kubectl get events -A --sort-by=.metadata.creationTimestamp | tail -50
+
+      - name: Destroy and redeploy (idempotency)
+        run: |
+          python3 scripts/destroy.py
+          python3 scripts/deploy.py
+          python3 scripts/verify.py

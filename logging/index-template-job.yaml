@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: elasticsearch-setup
+  namespace: logging
+  labels:
+    app.kubernetes.io/name: elasticsearch-setup
+    app.kubernetes.io/part-of: k8s-observability-demo
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: setup
+          image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              until curl -fsS "http://elasticsearch:9200/_cluster/health?local=true" >/dev/null; do
+                sleep 3
+              done
+              curl -fsS -X PUT "http://elasticsearch:9200/_index_template/demo-web" \
+                -H 'Content-Type: application/json' \
+                -d '{"index_patterns":["demo-web-*"],"template":{"settings":{"number_of_replicas":0}}}'
+              curl -fsS -X PUT "http://elasticsearch:9200/demo-web-*/_settings" \
+                -H 'Content-Type: application/json' \
+                -d '{"index.number_of_replicas":0}'
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi

@@ -1,0 +1,9 @@
+﻿apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: envoy-gateway
+  labels:
+    app.kubernetes.io/part-of: k8s-observability-demo
+    app.kubernetes.io/managed-by: kustomize
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
