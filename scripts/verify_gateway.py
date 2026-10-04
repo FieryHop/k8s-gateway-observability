@@ -40,7 +40,11 @@ def main() -> int:
         failed |= not ok
         print(f"{'OK' if ok else 'FAIL'}: {name} -> {actual!r}")
 
-    counts = Counter(fetch(base, "/split") for _ in range(args.requests))
+    try:
+        counts = Counter(fetch(base, "/split") for _ in range(args.requests))
+    except Exception as error:
+        print(f"FAIL: traffic split -> error: {error}")
+        return 1
     share = counts[CANARY] / args.requests
     ok = 0.10 <= share <= 0.30
     failed |= not ok

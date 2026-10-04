@@ -44,15 +44,19 @@ jobs:
         run: python3 scripts/deploy.py
 
       - name: Verify
-        run: |
-          python3 scripts/verify.py
-          python3 scripts/verify_gateway.py
+        run: python3 scripts/verify.py
+
+      - name: Verify Gateway API routing
+        run: ./scripts/ubuntu/verify-gateway.sh
 
       - name: Diagnostics
         if: failure()
         run: |
           kubectl get pods -A -o wide
           kubectl get gateway,httproute -A
+          kubectl -n envoy-gateway-system get svc,pods -o wide
+          kubectl -n platform-demo describe gateway demo-gateway
+          cat /tmp/gateway-port-forward.log || true
           kubectl get pvc -A
           kubectl get events -A --sort-by=.metadata.creationTimestamp | tail -50
 
@@ -61,3 +65,4 @@ jobs:
           python3 scripts/destroy.py
           python3 scripts/deploy.py
           python3 scripts/verify.py
+          ./scripts/ubuntu/verify-gateway.sh
